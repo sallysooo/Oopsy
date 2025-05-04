@@ -1,16 +1,11 @@
-import re
-from thefuck.specific.sudo import sudo_support
+from utils import for_app
 
-
-@sudo_support
 def match(command):
-    return ('rm' in command.script
-            and 'is a directory' in command.output.lower())
+    return (for_app("rm")(command)
+            and 'is a directory' in command.output)
 
-
-@sudo_support
 def get_new_command(command):
-    arguments = '-rf'
-    if 'hdfs' in command.script:
-        arguments = '-r'
-    return re.sub('\\brm (.*)', 'rm ' + arguments + ' \\1', command.script)
+    return f"{command.script} -rf"
+
+# $ rm somedir
+# oops -> $ rm -rf somedir

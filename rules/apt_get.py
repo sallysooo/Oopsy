@@ -1,3 +1,17 @@
+from utils import starts_with
+
+def match(command):
+    return(
+        starts_with(command, "apt-get") or starts_with(command, "apt")
+    ) and "permission denied" in command.output.lower()
+
+def get_new_command(command):
+    return f"sudo {command.script}"
+
+# $ apt install foo
+# oops -> sudo apt install foo
+
+'''
 from types import ModuleType
 from thefuck.specific.apt import apt_available
 from thefuck.utils import memoize, which
@@ -48,3 +62,4 @@ def get_new_command(command):
     name = get_package(executable)
     formatme = shell.and_('sudo apt-get install {}', '{}')
     return formatme.format(name, command.script)
+'''

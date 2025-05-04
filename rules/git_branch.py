@@ -5,3 +5,6 @@ def match(command):
 
 def get_new_command(command):
     return "git branch"
+
+# $ git brnch
+# oops -> git branch

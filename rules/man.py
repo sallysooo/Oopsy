@@ -1,11 +1,15 @@
-from thefuck.utils import for_app
+from utils import for_app
 
-
-@for_app('man', at_least=1)
 def match(command):
-    return True
+    return for_app("man")(command) and "No manual entry" in command.output
 
+def get_new_command(command):
+    return command.script.replace("man", "info", 1)
 
+# $ man something_not_exist
+# oops -> $ info something_not_exist
+
+'''
 def get_new_command(command):
     if '3' in command.script:
         return command.script.replace("3", "2")
@@ -31,3 +35,4 @@ def get_new_command(command):
         "".join(split_cmd2),
         help_command,
     ]
+'''
