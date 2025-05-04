@@ -1,5 +1,7 @@
+from utils import for_app
+
 def match(command):
-    return "git: 'brnch' is not a git command" in command.output
+    return for_app("git")(command) and "did you mean 'branch'" in command.output
 
 def get_new_command(command):
-    return command.script.replace("brnch", "branch")
+    return "git branch"

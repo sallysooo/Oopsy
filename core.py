@@ -8,8 +8,11 @@ def load_rules():
     for file in os.listdir(rules_dir):
         if file.endswith('.py') and not file.startswith('__'): # git_branch.py
             mod_name = f"rules.{file[:-3]}" # rules.git_branch
-            mod = importlib.import_module(mod_name) # import rules.git_branch
-            rules.append(mod)
+            try:
+                mod = importlib.import_module(mod_name) # import rules.git_branch
+                # if match(), get_new_command() exists
+                if hasattr(mod, "match") and hasattr(mod, "get_new_command"): 
+                    rules.append(mod)
+            except Exception as e:
+                print(f"Failed to import {mod_name} : {e}")
     return rules
-
-
