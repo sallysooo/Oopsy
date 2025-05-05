@@ -1,6 +1,5 @@
 import os
-from thefuck.shells import shell
-
+from utils import shell_and
 
 def match(command):
     return (command.script.startswith('./')
@@ -10,6 +9,11 @@ def match(command):
 
 
 def get_new_command(command):
-    return shell.and_(
-        'chmod +x {}'.format(command.script_parts[0][2:]),
-        command.script)
+    filepath = command.script_parts[0][2:] # './my_script' -> 'my_script'
+    return shell_and(f'chmod +x {filepath}', command.script)
+    
+'''
+$ ./run_me
+bash: ./run_me: Permission denied
+oops -> $ chmod +x run_me && ./run_me
+'''

@@ -1,16 +1,13 @@
-from thefuck.shells import shell
-from thefuck.specific.git import git_support
+from utils import shell_and, for_app
 
-
-@git_support
+@for_app("git")
 def match(command):
     return 'pull' in command.script and 'set-upstream' in command.output
 
 
-@git_support
 def get_new_command(command):
     line = command.output.split('\n')[-3].strip()
     branch = line.split(' ')[-1]
     set_upstream = line.replace('<remote>', 'origin')\
                        .replace('<branch>', branch)
-    return shell.and_(set_upstream, command.script)
+    return shell_and(set_upstream, command.script)

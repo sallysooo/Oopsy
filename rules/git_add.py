@@ -1,27 +1,29 @@
 import re
-from thefuck.shells import shell
-from thefuck.specific.git import git_support
-from thefuck.system import Path
-from thefuck.utils import memoize
+import os
+from utils import shell_and, for_app
 
-
-@memoize
 def _get_missing_file(command):
     pathspec = re.findall(
         r"error: pathspec '([^']*)' "
         r'did not match any file\(s\) known to git.', command.output)[0]
-    if Path(pathspec).exists():
+    if os.path.exists(pathspec):
         return pathspec
+    return None
 
-
-@git_support
+@for_app("git")
 def match(command):
     return ('did not match any file(s) known to git.' in command.output
-            and _get_missing_file(command))
+            and _get_missing_file(command) is not None)
 
 
-@git_support
 def get_new_command(command):
     missing_file = _get_missing_file(command)
-    formatme = shell.and_('git add -- {}', '{}')
-    return formatme.format(missing_file, command.script)
+    return shell_and(f"git add -- {missing_file}", command.script)
+
+'''
+Git 명령 중 빠뜨린 파일을 자동으로 git add 해주는 명령 제안
+$ git commit -m "initial"
+error: pathspec 'main.py' did not match any file(s) known to git.
+
+oops -> git add -- main.py && git commit -m "initial"
+'''

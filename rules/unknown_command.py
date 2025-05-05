@@ -1,5 +1,5 @@
 import re
-from thefuck.utils import replace_command
+from utils import replace_argument
 
 
 def match(command):
@@ -10,4 +10,4 @@ def match(command):
 def get_new_command(command):
     broken_cmd = re.findall(r"([^:]*): Unknown command.*", command.output)[0]
     matched = re.findall(r"Did you mean ([^?]*)?", command.output)
-    return replace_command(command, broken_cmd, matched)
+    return replace_argument(command, broken_cmd, matched)

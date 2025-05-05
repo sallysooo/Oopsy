@@ -1,18 +1,27 @@
 import re
-from thefuck.utils import get_all_matched_commands, replace_command
-from thefuck.specific.git import git_support
+from utils import for_app, replace_argument, get_closest
 
-
-@git_support
+@for_app("git")
 def match(command):
-    return (" is not a git command. See 'git --help'." in command.output
-            and ('The most similar command' in command.output
-                 or 'Did you mean' in command.output))
+    return (
+        "is not a git command" in command.output.lower() and
+        ("did you mean" in command.output.lower() or "most similar command" in command.output.lower())
+    )
 
-
-@git_support
 def get_new_command(command):
-    broken_cmd = re.findall(r"git: '([^']*)' is not a git command",
-                            command.output)[0]
-    matched = get_all_matched_commands(command.output, ['The most similar command', 'Did you mean'])
-    return replace_command(command, broken_cmd, matched)
+    broken_cmd = re.findall(r"git: '([^']*)' is not a git command", command.output)
+    suggestion = re.findall(r'\n\s*([a-z][a-z0-9\-]+)\s*$', command.output.lower(), re.MULTILINE)
+
+    if not broken_cmd or not suggestion:
+        return command.script
+
+    return replace_argument(command, broken_cmd[0], suggestion[0])
+
+'''
+$ git comit -m "msg"
+git: 'comit' is not a git command. See 'git --help'.
+Did you mean this?
+        commit
+
+oops -> $ git commit -m "msg"
+'''

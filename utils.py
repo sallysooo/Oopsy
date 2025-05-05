@@ -1,8 +1,8 @@
 
-def for_app(app_name):
-    '''해당 명령어가 특정 앱 이름으로 시작하는지 확인'''
+def for_app(*app_names):
+    '''여러 앱 이름을 받아서, 첫 번째 명령어가 그 중 하나인지 확인'''
     def match_func(command):
-        return command.script_parts and command.script_parts[0] == app_name
+        return command.script_parts and command.script_parts[0] in app_names
     return match_func
 
 def replace_argument(command, old, new):
@@ -61,7 +61,7 @@ def quote(s):
         return f'"{s}"'
     return s
 
-
-
-
+def shell_and(*cmds):
+    '''두 명령어를 &&로 연결'''
+    return " && ".join(cmds)
 

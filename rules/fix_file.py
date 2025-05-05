@@ -1,80 +1,48 @@
 import re
 import os
-from thefuck.utils import memoize, default_settings
-from thefuck.conf import settings
-from thefuck.shells import shell
+from utils import shell_and, quote
 
 
-# order is important: only the first match is considered
-patterns = (
-    # js, node:
-    '^    at {file}:{line}:{col}',
-    # cargo:
-    '^   {file}:{line}:{col}',
-    # python, thefuck:
-    '^  File "{file}", line {line}',
-    # awk:
-    '^awk: {file}:{line}:',
-    # git
-    '^fatal: bad config file line {line} in {file}',
-    # llc:
-    '^llc: {file}:{line}:{col}:',
-    # lua:
-    '^lua: {file}:{line}:',
-    # fish:
-    '^{file} \\(line {line}\\):',
-    # bash, sh, ssh:
-    '^{file}: line {line}: ',
-    # cargo, clang, gcc, go, pep8, rustc:
-    '^{file}:{line}:{col}',
-    # ghc, make, ruby, zsh:
-    '^{file}:{line}:',
-    # perl:
-    'at {file} line {line}',
-)
+# extract <file> and <line> from various error messages
+patterns = [
+    r'File "(?P<file>[^"]+)", line (?P<line>\d+)',           # Python
+    r'(?P<file>[^:\n]+): line (?P<line>\d+)',                # Shell(bash, sh, ssh)
+    r'(?P<file>[^:\n]+):(?P<line>\d+):(?P<col>\d+)?',        # C/C++, go, rustc, cargo
+    r'at (?P<file>[^\s]+) line (?P<line>\d+)',               # Perl
+]
+
+compiled_patterns = [re.compile(p) for p in patterns]
 
 
-# for the sake of readability do not use named groups above
-def _make_pattern(pattern):
-    pattern = pattern.replace('{file}', '(?P<file>[^:\n]+)') \
-                     .replace('{line}', '(?P<line>[0-9]+)') \
-                     .replace('{col}', '(?P<col>[0-9]+)')
-    return re.compile(pattern, re.MULTILINE)
-
-
-patterns = [_make_pattern(p).search for p in patterns]
-
-
-@memoize
-def _search(output):
-    for pattern in patterns:
-        m = pattern(output)
-        if m and os.path.isfile(m.group('file')):
-            return m
+def _extract_file_and_line(output):
+    for pattern in compiled_patterns:
+        match = pattern.search(output)
+        if match:
+            file = match.group("file")
+            line = match.group("line")
+            if os.path.isfile(file):
+                return file, line
+    return None, None
 
 
 def match(command):
-    if 'EDITOR' not in os.environ:
-        return False
-
-    return _search(command.output)
+    return _extract_file_and_line(command.output)[0] is not None and 'EDITOR' in os.environ
 
 
-@default_settings({'fixlinecmd': u'{editor} {file} +{line}',
-                   'fixcolcmd': None})
 def get_new_command(command):
-    m = _search(command.output)
+    file, line = _extract_file_and_line(command.output)
+    editor = os.environ['EDITOR']
+    return shell_and(f'{editor} {quote(file)} +{line}', command.script)
+    
 
-    # Note: there does not seem to be a standard for columns, so they are just
-    # ignored by default
-    if settings.fixcolcmd and 'col' in m.groupdict():
-        editor_call = settings.fixcolcmd.format(editor=os.environ['EDITOR'],
-                                                file=m.group('file'),
-                                                line=m.group('line'),
-                                                col=m.group('col'))
-    else:
-        editor_call = settings.fixlinecmd.format(editor=os.environ['EDITOR'],
-                                                 file=m.group('file'),
-                                                 line=m.group('line'))
+'''
+오류 메시지에 "file:line" 정보가 포함되어 있을 경우 -> 해당 파일의 특정 라인을 에디터로 열어주는 명령어 생성
+$ python script.py
+Traceback (most recent call last):
+  File "main.py", line 42, in <module>
+    ...
+NameError: name 'x' is not defined
 
-    return shell.and_(editor_call, command.script)
+
+oops -> $ vim main.py +42 && python script.py
+'''

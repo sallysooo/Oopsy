@@ -1,5 +1,5 @@
 import re
-from thefuck.utils import for_app
+from utils import for_app
 
 commands = ('ssh', 'scp')
 

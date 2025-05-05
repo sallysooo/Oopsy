@@ -1,13 +1,34 @@
 from utils import for_app
 
+@for_app("man")
 def match(command):
-    return for_app("man")(command) and "No manual entry" in command.output
+    return True
 
 def get_new_command(command):
-    return command.script.replace("man", "info", 1)
+    parts = command.script_parts
+    last_arg = parts[-1]
+    
+    help_command = last_arg + " --help"
+    
+    # output : "No manual entry for <command>"
+    if command.output.strip() == f"No manual entry for {last_arg}":
+        return [help_command]
+    
+    parts2 = parts[:]
+    parts3 = parts[:]
+    
+    parts2.insert(1, "2")
+    parts3.insert(1, "3")
+    
+    return [
+        " ".join(parts2),
+        " ".join(parts3),
+        help_command,
+    ]
 
-# $ man something_not_exist
-# oops -> $ info something_not_exist
+# $ man foo
+# oops -> 1. man 3 foo / 2. man 2 foo / 3. foo --help
+
 
 '''
 def get_new_command(command):

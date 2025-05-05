@@ -29,19 +29,20 @@ patterns = ['permission denied',
 
 
 def match(command):
-    if command.script_parts and '&&' not in command.script_parts and command.script_parts[0] == 'sudo':
+    if command.script_parts and command.script_parts[0] == 'sudo':
         return False
-
+    
     for pattern in patterns:
         if pattern in command.output.lower():
             return True
     return False
 
-
 def get_new_command(command):
-    if '&&' in command.script:
-        return u'sudo sh -c "{}"'.format(" ".join([part for part in command.script_parts if part != "sudo"]))
-    elif '>' in command.script:
-        return u'sudo sh -c "{}"'.format(command.script.replace('"', '\\"'))
+    if '&&' in command.script or '>' in command.script or '|' in command.script:
+        cleaned_script = " ".join([part for part in command.script_parts if part != "sudo"])
+        safe_script = cleaned_script.replace('"', '\\"')
+        return f'sudo sh -c "{safe_script}"'
     else:
-        return u'sudo {}'.format(command.script)
+        return f'sudo {command.script}'
+
+# add 'sudo' for privilege errors

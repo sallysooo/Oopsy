@@ -1,6 +1,5 @@
 import re
-from thefuck.shells import shell
-from thefuck.utils import for_app
+from utils import for_app, shell_and
 
 
 @for_app('touch')
@@ -11,4 +10,4 @@ def match(command):
 def get_new_command(command):
     path = re.findall(
         r"touch: (?:cannot touch ')?(.+)/.+'?:", command.output)[0]
-    return shell.and_(u'mkdir -p {}'.format(path), command.script)
+    return shell_and(u'mkdir -p {path}', command.script)

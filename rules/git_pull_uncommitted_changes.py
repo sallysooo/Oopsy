@@ -1,14 +1,23 @@
-from thefuck.shells import shell
-from thefuck.specific.git import git_support
+from utils import shell_and, for_app
 
-
-@git_support
+@for_app("git")
 def match(command):
-    return ('pull' in command.script
-            and ('You have unstaged changes' in command.output
-                 or 'contains uncommitted changes' in command.output))
+    return (
+        "pull" in command.script and
+        any(keyword in command.output.lower() for keyword in [
+            "you have unstaged changes",
+            "contains uncommitted changes",
+            "would be overwritten by merge"
+        ])
+    )
 
-
-@git_support
 def get_new_command(command):
-    return shell.and_('git stash', 'git pull', 'git stash pop')
+    return shell_and("git stash", "git pull", "git stash pop")
+
+'''
+로컬에 변경사항이 있을 때 git pull 실패하는 경우 stash 기반 해결 제안하기
+$ git pull
+error: Your local changes to the following files would be overwritten by merge
+
+oops -> git stash && git pull && git stash pop
+'''

@@ -1,7 +1,4 @@
-import tarfile
-import os
-from thefuck.utils import for_app
-from thefuck.shells import shell
+from utils import for_app, shell_and, quote
 
 
 tar_extensions = ('.tar', '.tar.Z', '.tar.bz2', '.tar.gz', '.tar.lz',
@@ -9,20 +6,19 @@ tar_extensions = ('.tar', '.tar.Z', '.tar.bz2', '.tar.gz', '.tar.lz',
                   '.tgz', '.tlz', '.txz', '.tz')
 
 
-def _is_tar_extract(cmd):
-    if '--extract' in cmd:
+def _is_tar_extract(cmd_str):
+    if '--extract' in cmd_str:
         return True
-
-    cmd = cmd.split()
-
-    return len(cmd) > 1 and 'x' in cmd[1]
+    parts = cmd_str.split()
+    return len(parts) > 1 and 'x' in parts[1]
 
 
-def _tar_file(cmd):
-    for c in cmd:
+def _tar_file(parts):
+    for part in parts:
         for ext in tar_extensions:
-            if c.endswith(ext):
-                return (c, c[0:len(c) - len(ext)])
+            if part.endswith(ext):
+                return (part, part[:-len(ext)])
+    return None
 
 
 @for_app('tar')
@@ -33,21 +29,12 @@ def match(command):
 
 
 def get_new_command(command):
-    dir = shell.quote(_tar_file(command.script_parts)[1])
-    return shell.and_('mkdir -p {dir}', '{cmd} -C {dir}') \
-        .format(dir=dir, cmd=command.script)
+    tar_file, dest_dir = _tar_file(command.script_parts)
+    dest_dir = quote(dest_dir)
+    return shell_and(f'mkdir -p {dest_dir}', f'{command.script} -C {dest_dir}')
 
+'''
+$ tar xf logs.tar.gz -> All the files in current directory gets untarred randomly
 
-def side_effect(old_cmd, command):
-    with tarfile.TarFile(_tar_file(old_cmd.script_parts)[0]) as archive:
-        for file in archive.getnames():
-            if not os.path.abspath(file).startswith(os.getcwd()):
-                # it's unsafe to overwrite files outside of the current directory
-                continue
-
-            try:
-                os.remove(file)
-            except OSError:
-                # does not try to remove directories as we cannot know if they
-                # already existed before
-                pass
+oops -> mkdir -p logs && tar xf logs.tar.gz -C logs
+'''

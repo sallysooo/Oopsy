@@ -1,42 +1,41 @@
-'''
-Rule: git_clone_missing
+import os
+from urllib.parse import urlparse
+from shutil import which
 
-Correct missing `git clone` command when pasting a git URL
-
-```sh
->>> https://github.com/nvbn/thefuck.git
-git clone https://github.com/nvbn/thefuck.git
-```
-
-Author: Miguel Guthridge
-'''
-from six.moves.urllib import parse
-from thefuck.utils import which
+def is_git_url(text):
+    return(
+        text.startwith("http://") or
+        text.startwith("https://") or
+        text.startwith("git@") or
+        text.startwith("ssh://")
+    )
 
 
 def match(command):
     # We want it to be a URL by itself
     if len(command.script_parts) != 1:
         return False
-    # Ensure we got the error we expected
-    if which(command.script_parts[0]) or not (
-        'No such file or directory' in command.output
-        or 'not found' in command.output
-        or 'is not recognised as' in command.output
-    ):
+    
+    url = command.script.strip()
+    
+    if which(url):
         return False
-    url = parse.urlparse(command.script, scheme='ssh')
-    # HTTP URLs need a network address
-    if not url.netloc and url.scheme != 'ssh':
+    
+    if not any(x in command.output.lower() for x in [
+        'no such file or directory',
+        'not found',
+        'is not recognised as'
+    ]):
         return False
-    # SSH needs a username and a splitter between the path
-    if url.scheme == 'ssh' and not (
-        '@' in command.script
-        and ':' in command.script
-    ):
-        return False
-    return url.scheme in ['http', 'https', 'ssh']
-
+    
+    return is_git_url(url)
 
 def get_new_command(command):
-    return 'git clone ' + command.script
+    return f"git clone {command.script}"
+
+'''
+$ https://github.com/user/project.git
+bash: https://github.com/user/project.git: No such file or directory
+
+oops -> $ git clone https://github.com/user/project.git
+'''

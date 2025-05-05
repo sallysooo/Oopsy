@@ -1,7 +1,6 @@
 import os
 import zipfile
-from thefuck.utils import for_app
-from thefuck.shells import shell
+from utils import for_app, quote
 
 
 def _is_bad_zip(file):
@@ -22,7 +21,8 @@ def _zip_file(command):
             if c.endswith('.zip'):
                 return c
             else:
-                return u'{}.zip'.format(c)
+                return f"{c}.zip"
+    return None
 
 
 @for_app('unzip')
@@ -31,30 +31,16 @@ def match(command):
         return False
 
     zip_file = _zip_file(command)
-    if zip_file:
-        return _is_bad_zip(zip_file)
-    else:
-        return False
+    return zip_file and _is_bad_zip(zip_file)
 
 
 def get_new_command(command):
-    return u'{} -d {}'.format(
-        command.script, shell.quote(_zip_file(command)[:-4]))
+    zip_file = _zip_file(command)
+    return f"{command.output} -d {quote(zip_file[:-4])}" # 'abc.zip' -> 'abc'
 
 
-def side_effect(old_cmd, command):
-    with zipfile.ZipFile(_zip_file(old_cmd), 'r') as archive:
-        for file in archive.namelist():
-            if not os.path.abspath(file).startswith(os.getcwd()):
-                # it's unsafe to overwrite files outside of the current directory
-                continue
+'''
+$ unzip data.zip
 
-            try:
-                os.remove(file)
-            except OSError:
-                # does not try to remove directories as we cannot know if they
-                # already existed before
-                pass
-
-
-requires_output = False
+oops -> $ unzip data.zip -d data
+'''
