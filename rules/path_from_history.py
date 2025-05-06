@@ -1,10 +1,7 @@
-from collections import Counter
 import re
-from thefuck.system import Path
-from thefuck.utils import (get_valid_history_without_current,
-                           memoize, replace_argument)
-from thefuck.shells import shell
-
+import os
+import subprocess
+from utils import replace_argument
 
 patterns = [r'no such file or directory: (.*)$',
             r"cannot access '(.*)': No such file or directory",
@@ -12,42 +9,55 @@ patterns = [r'no such file or directory: (.*)$',
             r"can't cd to (.*)$"]
 
 
-@memoize
-def _get_destination(command):
+def _get_destination(output, script_parts):
     for pattern in patterns:
-        found = re.findall(pattern, command.output)
-        if found:
-            if found[0] in command.script_parts:
-                return found[0]
+        found = re.findall(pattern, output.lower())
+        if found and found[0] in script_parts:
+            return found[0]
+    return None
 
+def _get_bash_history():
+    try:
+        return subprocess.getoutput('history').split('\n')
+    except Exception:
+        return []
+
+
+def _get_all_absolute_paths_from_history():
+    paths = set()
+
+    for line in _get_bash_history():
+        tokens = line.strip().split()
+        for token in tokens[1:]:
+            if token.startswith('/') or token.startswith('~'):
+                clean = token.rstrip('/')
+                expanded = os.path.expanduser(clean)
+                if os.path.exists(expanded):
+                    paths.add(token)
+    return paths
 
 def match(command):
-    return bool(_get_destination(command))
-
-
-def _get_all_absolute_paths_from_history(command):
-    counter = Counter()
-
-    for line in get_valid_history_without_current(command):
-        splitted = shell.split_command(line)
-
-        for param in splitted[1:]:
-            if param.startswith('/') or param.startswith('~'):
-                if param.endswith('/'):
-                    param = param[:-1]
-
-                counter[param] += 1
-
-    return (path for path, _ in counter.most_common(None))
+    return _get_destination(command.output, command.script_parts) is not None
 
 
 def get_new_command(command):
-    destination = _get_destination(command)
-    paths = _get_all_absolute_paths_from_history(command)
+    dest = _get_destination(command.output, command.script_parts)
+    candidates = _get_all_absolute_paths_from_history(command)
+    for path in candidates:
+        if path.endswith(dest):
+            return replace_argument(command, dest, path)
+    return command.script    
 
-    return [replace_argument(command.script, destination, path)
-            for path in paths if path.endswith(destination)
-            and Path(path).expanduser().exists()]
 
 
-priority = 800
+'''
+경로를 오타로 잘못 입력한 경우, 이전에 입력했던 정확한 경로를 history에서 찾아 자동 추천
+- 에러 메시지에서 경로 추출
+- bash history 에서 절대경로 후보 추출
+- 존재하는 경로와 비교하여 가장 유사한 추천 1개 제공 (가장 유사하거나 최근 명령)
+
+$ cd ~/Dev/projec
+cd: no such file or directory: ~/Dev/projec
+
+oops -> $ cd ~/Dev/project
+'''

@@ -1,5 +1,5 @@
 import re
-from thefuck.shells import shell
+from utils import shell_and
 
 
 patterns = (
@@ -26,5 +26,5 @@ def get_new_command(command):
             file = file[0]
             dir = file[0:file.rfind('/')]
 
-            formatme = shell.and_('mkdir -p {}', '{}')
+            formatme = shell_and('mkdir -p {}', '{}')
             return formatme.format(dir, command.script)

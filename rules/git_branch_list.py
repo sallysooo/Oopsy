@@ -1,14 +1,10 @@
-from thefuck.shells import shell
-from thefuck.specific.git import git_support
+from utils import shell_and, for_app
 
-
-@git_support
+@for_app("git")
 def match(command):
     # catches "git branch list" in place of "git branch"
     return (command.script_parts
             and command.script_parts[1:] == 'branch list'.split())
 
-
-@git_support
 def get_new_command(command):
-    return shell.and_('git branch --delete list', 'git branch')
+    return shell_and('git branch --delete list', 'git branch')

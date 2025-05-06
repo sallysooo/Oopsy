@@ -5,36 +5,38 @@
 # The file ~/github.com does not exist.
 # Perhaps you meant 'http://github.com'?
 #
-from thefuck.shells import shell
-from thefuck.utils import eager, for_app
+from utils import shell_and, for_app
 
 
-def is_arg_url(command):
-    return ('.com' in command.script or
-            '.edu' in command.script or
-            '.info' in command.script or
-            '.io' in command.script or
-            '.ly' in command.script or
-            '.me' in command.script or
-            '.net' in command.script or
-            '.org' in command.script or
-            '.se' in command.script or
-            'www.' in command.script)
+def is_url(command):
+    return any(ext in command for ext in
+               ['.com', '.net', '.org', '.io', '.edu', '.me', '.ly', 'www.'])
 
 
 @for_app('open', 'xdg-open', 'gnome-open', 'kde-open')
 def match(command):
-    return (is_arg_url(command) or
-            command.output.strip().startswith('The file ') and
-            command.output.strip().endswith(' does not exist.'))
+    return (
+        is_url(command.script) or
+        ('The file ' in command.output and 'does not exist' in command.output)
+    )
 
-
-@eager
 def get_new_command(command):
-    output = command.output.strip()
-    if is_arg_url(command):
-        yield command.script.replace('open ', 'open http://')
-    elif output.startswith('The file ') and output.endswith(' does not exist.'):
-        arg = command.script.split(' ', 1)[1]
-        for option in ['touch', 'mkdir']:
-            yield shell.and_(u'{} {}'.format(option, arg), command.script)
+    if is_url(command.script):
+        return command.script.replace('open ', 'open http://', 1)
+
+    arg = command.script.split(' ', 1)[1]
+    # 기본적으로 touch 방식만 추천 (단순화 ver.)
+    return shell_and(f'touch {arg}', command.script)
+
+'''
+$ open github.com
+The file ~/github.com does not exist.
+
+oops -> $ open http://github.com 
+
+
+$ open myfile.txt
+The file myfile.txt does not exist.
+
+oops -> $ touch myfile.txt && open myfile.txt
+'''

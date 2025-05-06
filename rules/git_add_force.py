@@ -1,5 +1,6 @@
-from utils import replace_argument
+from utils import replace_argument, for_app
 
+@for_app("git")
 def match(command):
     return ('add' in command.script_parts
             and 'Use -f if you really want to add them.' in command.output)

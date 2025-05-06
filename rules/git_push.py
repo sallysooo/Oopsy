@@ -1,9 +1,7 @@
 import re
-from thefuck.utils import replace_argument
-from thefuck.specific.git import git_support
+from utils import replace_argument, for_app
 
-
-@git_support
+@for_app("git")
 def match(command):
     return ('push' in command.script_parts
             and 'git push --set-upstream' in command.output)
@@ -17,8 +15,6 @@ def _get_upstream_option_index(command_parts):
     else:
         return None
 
-
-@git_support
 def get_new_command(command):
     # If --set-upstream or -u are passed, remove it and its argument. This is
     # because the remaining arguments are concatenated onto the command suggested

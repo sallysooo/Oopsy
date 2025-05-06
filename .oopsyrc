@@ -1,0 +1,4 @@
+# .oopsyrc
+enabled_rules: []
+log_enabled: true
+auto_mode: false

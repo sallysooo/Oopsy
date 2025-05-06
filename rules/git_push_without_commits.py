@@ -1,12 +1,11 @@
 import re
-from thefuck.shells import shell
-from thefuck.specific.git import git_support
+from utils import shell_and, for_app
 
 
-@git_support
+@for_app("git")
 def match(command):
     return bool(re.search(r"src refspec \w+ does not match any", command.output))
 
 
 def get_new_command(command):
-    return shell.and_('git commit -m "Initial commit"', command.script)
+    return shell_and('git commit -m "Initial commit"', command.script)

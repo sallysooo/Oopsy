@@ -1,6 +1,6 @@
 import re
-from thefuck.utils import for_app, which, replace_argument
-
+from utils import for_app, replace_argument
+from shutil import which
 
 def _get_command_name(command):
     found = re.findall(r'sudo: (.*): command not found', command.output)

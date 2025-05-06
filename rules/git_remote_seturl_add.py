@@ -1,8 +1,6 @@
-from thefuck.utils import replace_argument
-from thefuck.specific.git import git_support
+from utils import for_app, replace_argument
 
-
-@git_support
+@for_app("git")
 def match(command):
     return ('set-url' in command.script
             and 'fatal: No such remote' in command.output)

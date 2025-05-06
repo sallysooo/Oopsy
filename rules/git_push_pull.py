@@ -1,9 +1,6 @@
-from thefuck.shells import shell
-from thefuck.utils import replace_argument
-from thefuck.specific.git import git_support
+from utils import replace_argument, shell_and, for_app
 
-
-@git_support
+@for_app("git")
 def match(command):
     return ('push' in command.script and
             '! [rejected]' in command.output and
@@ -14,7 +11,5 @@ def match(command):
              'contains work that you do' in command.output))
 
 
-@git_support
 def get_new_command(command):
-    return shell.and_(replace_argument(command.script, 'push', 'pull'),
-                      command.script)
+    return shell_and(replace_argument(command.script, 'push', 'pull'), command.script)
