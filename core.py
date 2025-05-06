@@ -1,6 +1,7 @@
 # core logic (ex. load rule files dynamically)
 import os
 import importlib # load module dynamically
+import inspect
 
 def load_rules():
     rules = []
@@ -11,7 +12,8 @@ def load_rules():
             try:
                 mod = importlib.import_module(mod_name) # import rules.git_branch
                 # if match(), get_new_command() exists
-                if hasattr(mod, "match") and hasattr(mod, "get_new_command"): 
+                if (hasattr(mod, "match") and inspect.isfunction(mod.match) and 
+                    hasattr(mod, "get_new_command") and inspect.isfunction(mod.get_new_command)): 
                     rules.append(mod)
             except Exception as e:
                 print(f"Failed to import {mod_name} : {e}")
