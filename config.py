@@ -2,7 +2,7 @@ import yaml
 import os
 
 DEFAULT_CONFIG = {
-    "enabled_rules": [],
+    "enabled_rules": None,
     "log_enabled": True,
     "auto_mode": False
 }

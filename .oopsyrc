@@ -1,4 +1,4 @@
 # .oopsyrc
-enabled_rules:
+enabled_rules:null
 log_enabled: true
 auto_mode: false
