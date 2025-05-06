@@ -1,9 +1,5 @@
 import re
-from thefuck.specific.apt import apt_available
-from thefuck.utils import for_app
-
-enabled_by_default = apt_available
-
+from utils import for_app
 
 @for_app('apt-get')
 def match(command):
@@ -12,3 +8,9 @@ def match(command):
 
 def get_new_command(command):
     return re.sub(r'^apt-get', 'apt-cache', command.script)
+
+'''
+$ apt-get search git
+
+oops -> $ apt-cache search git
+'''

@@ -1,63 +1,48 @@
 import subprocess
-from thefuck.specific.apt import apt_available
-from thefuck.specific.sudo import sudo_support
-from thefuck.utils import for_app, eager, replace_command
-
-enabled_by_default = apt_available
-
+import re
+from utils import for_app, get_closest, replace_argument, sudo_support
 
 @sudo_support
 @for_app('apt', 'apt-get', 'apt-cache')
 def match(command):
-    return 'E: Invalid operation' in command.output
+    return 'invalid operation' in command.output.lower()
 
-
-@eager
-def _parse_apt_operations(help_text_lines):
-    is_commands_list = False
-    for line in help_text_lines:
-        line = line.decode().strip()
-        if is_commands_list and line:
-            yield line.split()[0]
-        elif line.startswith('Basic commands:') \
-                or line.startswith('Most used commands:'):
-            is_commands_list = True
-
-
-@eager
-def _parse_apt_get_and_cache_operations(help_text_lines):
-    is_commands_list = False
-    for line in help_text_lines:
-        line = line.decode().strip()
-        if is_commands_list:
-            if not line:
-                return
-
-            yield line.split()[0]
-        elif line.startswith('Commands:') \
-                or line.startswith('Most used commands:'):
-            is_commands_list = True
-
-
-def _get_operations(app):
-    proc = subprocess.Popen([app, '--help'],
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE)
-    lines = proc.stdout.readlines()
-
-    if app == 'apt':
-        return _parse_apt_operations(lines)
-    else:
-        return _parse_apt_get_and_cache_operations(lines)
-
+def _get_available_operations(app):
+    try:
+        result = subprocess.run(
+            [app, '--help'],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True
+        )
+        output = result.stdout
+    except Exception:
+        return []
+    
+    # extract commands from apt --help
+    operations = []
+    for line in output.splitlines():
+        line = line.strip()
+        if re.match(r'^[a-z\-]+\s', line):
+            operations.append(line.split()[0])
+    return list(set(operations)) # remove duplicates
 
 @sudo_support
 def get_new_command(command):
-    invalid_operation = command.output.split()[-1]
+    app = command.script_parts[0]
+    wrong_op = command.script_parts[1]
+    operations = _get_available_operations(app)
+    closest = get_closest(wrong_op, operations)
+    
+    if not closest:
+        return command.script # fallback
+    
+    return replace_argument(command, wrong_op, closest)
 
-    if invalid_operation == 'uninstall':
-        return [command.script.replace('uninstall', 'remove')]
+'''
+apt 관련 명령에서 잘못된 작업 이름을 입력했을 때 자동으로 올바른 명령어를 제안
+$ sudo apt uninstall curl
+E: Invalid operation uninstall
 
-    else:
-        operations = _get_operations(command.script_parts[0])
-        return replace_command(command, invalid_operation, operations)
+oops -> $ sudo apt remove curl
+'''

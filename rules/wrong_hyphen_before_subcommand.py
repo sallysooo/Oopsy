@@ -1,20 +1,39 @@
-from thefuck.utils import get_all_executables
-from thefuck.specific.sudo import sudo_support
+from utils import sudo_support
+from shutil import which
 
+WHITELIST = {
+    'docker-compose',
+    'apt-key',
+    'pip-download',
+    'npm-run',
+    'kubectl-create',  
+    # add more...
+}
 
 @sudo_support
 def match(command):
-    first_part = command.script_parts[0]
-    if "-" not in first_part or first_part in get_all_executables():
+    parts = command.script_parts
+    if not parts: return False
+    first_part = parts[0]
+    
+    if first_part in WHITELIST:
         return False
-    cmd, _ = first_part.split("-", 1)
-    return cmd in get_all_executables()
+    if "-" not in first_part:
+        return False
+    if which(first_part):
+        return False
 
+    cmd = first_part.split("-")[0]
+    return which(cmd) is not None
 
 @sudo_support
 def get_new_command(command):
     return command.script.replace("-", " ", 1)
 
+'''
+$ git-commit -m "msg"
+oops -> $ git commit -m "msg"
 
-priority = 4500
-requires_output = False
+$ docker-compose up
+oops -> (it's in WHITELIST: no revision)
+'''
