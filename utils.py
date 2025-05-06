@@ -1,9 +1,14 @@
 
 def for_app(*app_names):
     '''여러 앱 이름을 받아서, 첫 번째 명령어가 그 중 하나인지 확인'''
-    def match_func(command):
-        return command.script_parts and command.script_parts[0] in app_names
-    return match_func
+    def decorator(match_func):
+        def wrapper(command):
+            if hasattr(command, 'script_parts') and command.script_parts:
+                if command.script_parts[0] in app_names:
+                    return match_func(command)
+            return False
+        return wrapper
+    return decorator
 
 def replace_argument(command, old, new):
     '''스크립트 내에서 인자를 교체'''
