@@ -2,7 +2,7 @@ import os
 from utils import for_app
 
 
-@for_app('cat', at_least=1)
+@for_app('cat')
 def match(command):
     return (
         command.output.startswith('cat: ') and

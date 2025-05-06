@@ -2,7 +2,7 @@ import re
 from utils import replace_argument, for_app
 
 
-@for_app('cargo', at_least=1)
+@for_app('cargo')
 def match(command):
     return ('no such subcommand' in command.output.lower()
             and 'Did you mean' in command.output)
