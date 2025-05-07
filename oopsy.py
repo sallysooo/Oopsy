@@ -40,7 +40,7 @@ def get_last_command():
         try:
             out = subprocess.check_output(
                 [bash_path, '-i', '-c', 'history -1'],
-                stderr=subprocecss.DEVNULL,
+                stderr=subprocess.DEVNULL,
                 text=True
             ).strip().splitlines()
             
@@ -67,9 +67,9 @@ def get_last_command():
 
 def main():
     last_cmd = get_last_command()
-    print(f"last command: {last_cmd}")
+    print(f"last command: {last_cmd}") # Debug
     result = subprocess.getoutput(last_cmd)
-    print(f"command output: {result[:50]}...")
+    print(f"command output: {result[:50]}...") # Debug
     cmd = Command(last_cmd, result) # error analysis & recommend revision
     
     rules = load_rules()
@@ -103,7 +103,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
 
