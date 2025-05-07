@@ -4,10 +4,10 @@ from shutil import which
 
 def is_git_url(text):
     return(
-        text.startwith("http://") or
-        text.startwith("https://") or
-        text.startwith("git@") or
-        text.startwith("ssh://")
+        text.startswith("http://") or
+        text.startswith("https://") or
+        text.startswith("git@") or
+        text.startswith("ssh://")
     )
 
 

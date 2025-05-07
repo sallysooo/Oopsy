@@ -21,48 +21,50 @@ class Command:
         return self.output
 
 def get_last_command():
-    '''
-    #0. non-interactive method
+    # Method 1. directly read bash history file
     try:
-        history_cmd = "HISTTIMEFORMAT='' history 1 | sed 's/^[ 0-9]*//'"
-        last_cmd = subprocess.getoutput(history_cmd)
-        if "oopsy.py" in last_cmd:
-            history_cmd = "HISTTIMEFORMAT='' history 2 | head -1 | sed 's/^[0-9]*//'"
-            last_cmd = subprocess.getoutput(history_cmd)
-        return last_cmd
+        # view 2 history commands with bash (current & previous)
+        cmd = '''
+        bash -c '
+        HISTFILE=~/.bash_history    # history file
+        HISTIGNORE="*"              # ignore exclusion of saving history
+        set -o history              # activate history in non-interactive mode
+        history -r                  # read history file again
+        history 2                   # 2 recent commands
+        '
+        '''
+        out = subprocess.check_output(
+            cmd,
+            shell=True,
+            stderr=subprocess.DEVNULL,
+            text=True
+        ).strip().split('\n')
+
+        if len(out) >= 2:
+            prev_cmd = out[0].split(' ', 1)[-1].strip()
+            current_cmd = out[1].split(' ', 1)[-1].strip()
+
+            if 'oopsy.py' in current_cmd:
+                return prev_cmd
+            else:
+                return current_cmd
     except Exception as e:
-        print(f"Failed to bring history: {e}")
-        return
-    '''
-    #1. bring history from bash interactive mode
-    bash_path = subprocess.getoutput('which bash')
-    if os.path.exists(bash_path):
-        try:
-            out = subprocess.check_output(
-                [bash_path, '-i', '-c', 'history -1'],
-                stderr=subprocess.DEVNULL,
-                text=True
-            ).strip().splitlines()
-            
-            if len(out) >= 2:
-                return out[0].split(' ', 1)[-1] # 'abcde ls -l' -> 'ls -l'
-        except Exception:
-            pass
+        print(f"[DEBUG] Method1 failed: {str(e)[:50]}")
+
+    # Method 2. Directly read .bash_history (backup)
+    try:
+        with open(os.path.expanduser('~/.bash_history'), 'r') as f:
+            lines = [line.strip() for line in f.readlines() if line.strip()]
+            if len(lines) >= 2 and 'oopsy.py' in lines[-1]:
+                return lines[-2]
+            elif lines:
+                return lines[-1]
+    except Exception as e:
+        print(f"[DEBUG] Method2 failed: {str(e)[:50]}")
     
-    #2. directly read bash history file
-    bash_hist = os.path.expanduser('~/.bash_history')
-    if os.path.exists(bash_hist):
-        try:
-            with open(bash_hist, 'r') as f:
-                lines = f.readlines()
-                if len(lines) >= 2:
-                    return lines[-2].strip()
-                elif lines:
-                    return lines[-1].strip()
-        except Exception:
-            pass
-    
-    return ""
+
+    print("Failed to track history. Enter command:")
+    return input("> ")
 
 
 def main():
@@ -90,9 +92,10 @@ def main():
                 if not config["auto_mode"]:
                     confirm = input("(Enter or n)")
                     if confirm.strip().lower() != 'n':
+                        subprocess.call(new_cmd, shell=True)
                         return
-                subprocess.call(new_cmd, shell=True)
-                return
+                else:
+                    return
         except Exception as e:
             print(f"[ERROR] Rule {rule_name} : {e}")
     
